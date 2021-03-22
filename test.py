@@ -12,7 +12,6 @@ def test_only(function, *args):
 
     assert function_state == True
 
-
 def test_output(function, *args):
 
     args = list([*args])
@@ -28,7 +27,6 @@ def test_output(function, *args):
     assert function_state == True
 
     return output
-
 
 if '__main__' == __name__:
     print('')

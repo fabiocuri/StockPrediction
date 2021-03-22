@@ -1,44 +1,56 @@
 import sys
+import json
 import pyrebase
-from get_data import *
-from models import *
-from firebase_actions import *
-from test import *
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
+import numpy as np
+from get_data import get_historical_data
+from models import impute_missing_values, hyperparameter_tuning, predict_tomorrow
 
 if '__main__' == __name__:
-    
+
     # Configuration
-    stock, index, params_f = str(sys.argv[1]), str(
-        sys.argv[2]), str(sys.argv[3])
+    stock, params_f = str(sys.argv[1]), str(sys.argv[2])
+    
+    with open(params_f) as json_file:
+     
+        local_config = json.load(json_file) 
 
-    with open(params_f) as f:
-        parameters = json.load(f)
-        for key in parameters:
-            globals()[key] = parameters[key]
-
-    config = {"apiKey": firebase_key,
-              "authDomain": "{}.firebaseapp.com".format(firebase_path),
-              "databaseURL": "https://{}.firebaseio.com".format(firebase_path),
-              "storageBucket": "{}.appspot.com".format(firebase_path)}
+    config = {"apiKey": local_config["apiKey"],
+              "authDomain": f"{local_config['authDomain']}.firebaseapp.com",
+              "databaseURL": f"https://{local_config['authDomain']}.firebaseio.com",
+              "storageBucket": f"{local_config['authDomain']}.appspot.com"}
 
     firebase_app_ = pyrebase.initialize_app(config)
     db = firebase_app_.database()
 
-    index = index.split("'")[1].split("<")
+    # db.child("XGBOOST_HYPERPARAMS").remove()
+    # db.child("HISTORY_PREDS").remove()
+    # db.child("CURRENT_PREDS").remove()
+    # sys.exit()
 
     # Get stock data
-    stock_data = get_historical_data(stock=stock, years=years)
-
+    stock_data = get_historical_data(stock=stock, years=local_config['years'])
+    
     # Missing values imputation
     stock_data = impute_missing_values(stock_data=stock_data)
-    
-    # Hyper-parameter tuning
-    hyperparameter_tuning(stock=stock, stock_data=stock_data, years=years,
-                          length_backtesting=length_backtesting, steps=steps, training=training, db=db, index=index)
 
-    # Train current day model and perform predictions
-    params = retrieve_params_firebase(stock=stock, db=db, index=index)
-    predict_tomorrow(stock=stock, stock_data=stock_data, steps=steps,
-                     training=training, db=db, index=index, params=params)
+    # Hyper-parameter tuning
+    hyperparameter_tuning(stock=stock, stock_data=stock_data, years=local_config['years'],
+                          length_backtesting=local_config['length_backtesting'], steps=local_config['steps'], training=local_config['training'], db=db)
+
+    # Run predictions for the past
+    runs = ["all"]
+    runs.extend(list((np.array(range(14)) + 1) * -1))
+
+    for i in runs:
+
+        if i == "all":
+
+            subset_data = stock_data
+
+        else:
+
+            subset_data = stock_data[:i]
+
+        # Predict next day
+        predict_tomorrow(stock=stock, stock_data=subset_data, steps=local_config['steps'],
+                        training=local_config['training'], db=db)

@@ -62,22 +62,22 @@ def add_ema(df, period):
     """
     Exponential moving average over period days.
     """
-    
+
     EMA = []
-    
+
     for i in range(len(df)):
-    
+
         if i>0:
-        
+
             block1 = df.iloc[i]['Close']*2 / (1 + period)
             block2 = df.iloc[i-1]['Close'] * (1 - 2 / (1 + period))
-    
+
             EMA.append(block1 + block2)
-            
+
         else:
-        
+
             EMA.append(float(df.iloc[0]['Close']))
-            
+
     df['EMA'] = EMA
 
     return df
@@ -99,54 +99,54 @@ def add_macd(df, period_fast, period_slow, period_signal):
     """
     Moving average convergence divergence.
     """
-    
+
     MACD_fast = []
-    
+
     for i in range(len(df)):
-    
+
         if i > 0:
-        
+
             block1 = df.iloc[i]['Close']*2 / (1 + period_fast)
             block2 = MACD_fast[i-1] * (1 - 2 / (1 + period_fast))
-    
+
             MACD_fast.append(block1 + block2)
-            
+
         else:
-        
+
             MACD_fast.append(float(df.iloc[0]['Close']))
-            
+
     MACD_slow = []
-    
+
     for i in range(len(df)):
-    
+
         if i > 0:
-        
+
             block1 = df.iloc[i]['Close']*2 / (1 + period_slow)
             block2 = MACD_slow[i-1] * (1 - 2 / (1 + period_slow))
-    
+
             MACD_slow.append(block1 + block2)
-            
+
         else:
-        
+
             MACD_slow.append(float(df.iloc[0]['Close']))
-           
+
     MACD = np.array(MACD_fast) - np.array(MACD_slow)
-    
+
     MACD_signal = []
-    
+
     for i in range(len(df)):
-    
+
         if i > 0:
-        
+
             block1 = MACD[i]*2 / (1 + period_signal)
             block2 = MACD_signal[i-1] * (1 - 2 / (1 + period_signal))
-    
+
             MACD_signal.append(block1 + block2)
-            
+
         else:
-        
+
             MACD_signal.append(float(MACD[0]))
-            
+
     df['MACD'] = MACD_signal
 
     return df
@@ -172,16 +172,16 @@ def add_rsi(df, period):
     """
 
     close = df.Close
-    delta = close.diff() 
+    delta = close.diff()
     up, down = delta.copy(), delta.copy()
 
     up[up < 0] = 0
     down[down > 0] = 0
-    
+
     # Calculate the exponential moving averages (EWMA)
     roll_up = up.ewm(com=period - 1, adjust=False).mean()
     roll_down = down.ewm(com=period - 1, adjust=False).mean().abs()
-    
+
     # Calculate RS based on exponential moving average (EWMA)
     rs = roll_up / roll_down   # relative strength =  average gain/average loss
 
@@ -240,7 +240,7 @@ def add_std(df, period):
     df['STD_CLOSE'] = df.Close.rolling(period).std()
 
     return df
-    
+
 def create_stock_dataframe(df):
 
     df_ = df.copy()
@@ -281,246 +281,246 @@ def add_gainloss(df):
     df['GAIN_LOSS'] = df['Close'].pct_change()
 
     return df
-    
+
 def add_inverted_hammer(df, invert=False):
     """
     Inverted Hammer.
     """
     name = 'Inverted Hammer'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
+
     return df
-    
+
 def add_hammer(df, invert=False):
     """
     Hammer.
     """
     name = 'Hammer'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
+
     return df
-    
+
 def add_hanging_man(df, invert=False):
     """
     Hanging Man.
     """
     name = 'Hanging Man'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
+
     return df
-    
+
 def add_bearish_harami(df, invert=False):
     """
     Bearish Harami.
     """
     name = 'Bearish Harami'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
+
     return df
-    
+
 def add_bullish_harami(df, invert=False):
     """
     Bullish Harami.
     """
     name = 'Bullish Harami'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
+
     return df
-    
+
 def add_dark_cloud_cover(df, invert=False):
     """
     Dark Cloud Cover.
     """
     name = 'Dark Cloud Cover'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
+
     return df
-    
+
 def add_doji(df, invert=False):
     """
     DOJI.
     """
     name = 'DOJI'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
+
     return df
-    
+
 def add_doji_star(df, invert=False):
     """
     DOJI Star.
     """
     name = 'DOJI Star'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
+
     return df
-    
+
 def add_dragonfly_doji(df, invert=False):
     """
     Dragonfly DOJI.
     """
     name = 'Dragonfly DOJI'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
-    return df   
-    
+
+    return df
+
 def add_gravestone_doji(df, invert=False):
     """
     Gravestone DOJI.
     """
     name = 'Gravestone DOJI'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
-    return df  
-    
+
+    return df
+
 def add_bearish_engulfing(df, invert=False):
     """
     Bearish Engulfing.
     """
     name = 'Bearish Engulfing'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
-    return df  
-    
+
+    return df
+
 def add_bullish_engulfing(df, invert=False):
     """
     Bullish Engulfing.
     """
     name = 'Bullish Engulfing'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
-    return df  
-    
+
+    return df
+
 def add_morning_star(df, invert=False):
     """
     Morning Star.
     """
     name = 'Morning Star'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
-    return df  
-    
+
+    return df
+
 def add_morning_star_doji(df, invert=False):
     """
     Morning Star DOJI.
     """
     name = 'Morning Star DOJI'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
-    return df 
-    
+
+    return df
+
 def add_piercing_pattern(df, invert=False):
     """
     Piercing.
     """
     name = 'Piercing'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
-    return df 
-    
+
+    return df
+
 def add_rain_drop(df, invert=False):
     """
     Rain Drop.
     """
     name = 'Rain Drop'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
-    return df 
-    
+
+    return df
+
 def add_rain_drop_doji(df, invert=False):
     """
     Rain Drop DOJI.
     """
     name = 'Rain Drop DOJI'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
-    return df 
-    
+
+    return df
+
 def add_star(df, invert=False):
     """
     Star.
     """
     name = 'Star'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
-    return df 
-    
+
+    return df
+
 def add_shooting_star(df, invert=False):
     """
     Shooting Star.
     """
     name = 'Shooting Star'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
-    return df 
-    
+
+    return df
+
 def add_evening_star(df, invert=False):
     """
     Evening Star.
     """
     name = 'Evening Star'
     df = candlestick.evening_star(df, target=name)
-    
+
     if invert:
         df[name] = df[name].replace({True: 1, False: 0})
-    
-    return df 
+
+    return df
 
 
 def get_historical_data(stock, years):
@@ -529,7 +529,7 @@ def get_historical_data(stock, years):
     """
 
     df, start, end = get_yahoo(stock, years)
-    
+
     if 'Low' not in df.columns:
         df.Low = df.Open
     if 'High' not in df.columns:
@@ -547,7 +547,7 @@ def get_historical_data(stock, years):
     df = add_adx(df=df)
     df = add_r(df=df, period=14)
     df = add_gainloss(df=df)
-    
+
     df = add_inverted_hammer(df=df, invert=True)
     df = add_hammer(df=df, invert=True)
     df = add_hanging_man(df=df, invert=True)
@@ -568,18 +568,13 @@ def get_historical_data(stock, years):
     df = add_star(df=df, invert=True)
     df = add_shooting_star(df=df, invert=True)
     df = add_evening_star(df=df, invert=True)
-    
-    print(df)
-    
+
     assert 'Open' in df.columns
     assert 'High' in df.columns
     assert 'Low' in df.columns
-    assert 'Close' in df.columns 
-
-    print('STEP [1/3]: Data retrieved!')
+    assert 'Close' in df.columns
 
     return df
-
 
 if '__main__' == __name__:
     print('')

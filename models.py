@@ -12,12 +12,13 @@ from get_data import *
 from firebase_actions import *
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
+from firebase_actions import retrieve_hyperparams_firebase
 
 def format_floats(value, n):
     return str(round(value, n))
 
 def impute_missing_values(stock_data):
-    """ 
+    """
     Missing values imputation.
     """
 
@@ -40,8 +41,8 @@ def get_dates(stock_data):
     Gets today value and next labor date.
     """
 
-    last_date = stock_data.index[-1]
-    last_date = dt.datetime.strptime(str(last_date), '%Y-%m-%d %H:%M:%S')
+    last_date_str = stock_data.index[-1]
+    last_date = dt.datetime.strptime(str(last_date_str), '%Y-%m-%d %H:%M:%S')
     next_date = (last_date + dt.timedelta(days=1))
 
     while next_date.weekday() == 5 or next_date.weekday() == 6:
@@ -49,7 +50,9 @@ def get_dates(stock_data):
 
     next_date = next_date.strftime('%Y-%m-%d')
 
-    return next_date
+    last_date_str = str(last_date_str).split(" ")[0]
+
+    return last_date_str, next_date
 
 
 def get_sequences(data, steps):
@@ -142,7 +145,7 @@ def split_data(new_df, training, tune_boolean, steps):
 
 
 def feature_selection(data, columns):
-    """ 
+    """
     Performs feature selection.
     """
 
@@ -163,7 +166,7 @@ def feature_selection(data, columns):
 
 
 def run(data, last_sequence, tune_boolean, lstm_size, batch_size, learning_rate):
-    """ 
+    """
     Run an instance of the model
     """
 
@@ -192,8 +195,8 @@ def run(data, last_sequence, tune_boolean, lstm_size, batch_size, learning_rate)
 
 
 def evaluate_backtesting(output):
-    """ 
-    Evaluates backtesting results 
+    """
+    Evaluates backtesting results
     """
 
     score = 0
@@ -207,7 +210,7 @@ def evaluate_backtesting(output):
     return score
 
 
-def hyperparameter_tuning(stock, stock_data, years, length_backtesting, steps, training, db, index):
+def hyperparameter_tuning(stock, stock_data, years, length_backtesting, steps, training, db):
     """
     Hyper-parameter tuning with back-testing.
     """
@@ -217,7 +220,7 @@ def hyperparameter_tuning(stock, stock_data, years, length_backtesting, steps, t
 
     for lstm_size in [10]:
 
-        for batch_size in [128]:
+        for batch_size in [64]:
 
             for learning_rate in [0.01]:
 
@@ -230,7 +233,7 @@ def hyperparameter_tuning(stock, stock_data, years, length_backtesting, steps, t
 
                     stock_data_ = stock_data[:i]
 
-                    next_date = get_dates(stock_data_)
+                    _, next_date = get_dates(stock_data_)
 
                     data, last_sequence = split_data(
                         stock_data_, training, tune_boolean, steps)
@@ -268,27 +271,24 @@ def hyperparameter_tuning(stock, stock_data, years, length_backtesting, steps, t
     hyperparams = {"LSTM size": best_params[0], "Batch size": best_params[1],
                    "Learning rate": best_params[2], "Selected features": best_params[3], "Back-testing accuracy": accuracy}
 
-    for index_ in index:
-
-        export_firebase(data=hyperparams, stock=stock, db=db,
-                        folder='{}_Params'.format(index_))
-
-    print('STEP [2/3]: Model tuned and exported to Firebase!')
+    export_firebase(data=hyperparams, stock=stock, db=db, folder='XGBOOST_HYPERPARAMS', delete=True)
 
 
-def predict_tomorrow(stock, stock_data, steps, training, db, index, params):
-    """ 
+def predict_tomorrow(stock, stock_data, steps, training, db):
+    """
     Predict gain_loss and price for the next day.
     """
-    
+
+    params = retrieve_hyperparams_firebase(stock=stock, db=db)
+
     columns = list(stock_data.columns)
-    
+
     last_stats = stock_data.iloc[-1]
-    
+
     data_last_stats = {}
-    
+
     for entry in columns:
-    
+
         data_last_stats['LAST_' + entry] = format_floats(last_stats[entry], 4)
 
     tune_boolean = False
@@ -298,11 +298,11 @@ def predict_tomorrow(stock, stock_data, steps, training, db, index, params):
     lstm_size, batch_size, learning_rate, model_features = params['lstm_size'], params['batch_size'], params['learning_rate'], params['selected_features'].replace(
         "'", '').replace("[", '').replace("]", '').split(', ')
 
-    next_date = get_dates(stock_data)
+    last_date, next_date = get_dates(stock_data)
 
     stock_data = stock_data[model_features]
     assert list(stock_data.columns)[-1] == 'GAIN_LOSS'
-    
+
     data, last_sequence = split_data(
         stock_data, training, tune_boolean, steps)
 
@@ -310,43 +310,43 @@ def predict_tomorrow(stock, stock_data, steps, training, db, index, params):
                     lstm_size, batch_size, learning_rate)
 
     next_price = (1 + gain_loss) * last_price
-    
+
     last_row = pd.DataFrame(np.zeros((1, len(model_features))), columns=model_features)
     stock_data = stock_data.append(last_row)
     stock_data['GAIN_LOSS'][-1] = gain_loss
-    
+
     stock_data['Close'][-1] = next_price
-    
+
     if 'Adj Close' not in list(stock_data.columns):
-    
+
         stock_data['Adj Close'] = list(stock_data['Close'])
-        
+
     stock_data['Adj Close'][-1] = next_price
-    
+
     if 'Open' not in list(stock_data.columns):
-    
+
         stock_data['Open'] = list(range(len(stock_data)))
         stock_data['Open'][1:] = stock_data['Close'][:-1]
-        
+
     stock_data['Open'][-1] = last_price
-    
+
     if 'Low' not in list(stock_data.columns):
-    
+
         stock_data['Low'] = stock_data['Open']
-        
+
     stock_data['Low'][-1] = last_price
-        
+
     if 'High' not in list(stock_data.columns):
-    
+
         stock_data['High'] = stock_data['Close']
-        
+
     stock_data['High'][-1] = next_price
-    
+
     assert 'Open' in stock_data.columns
     assert 'High' in stock_data.columns
     assert 'Low' in stock_data.columns
     assert 'Close' in stock_data.columns
-    
+
     stock_data = add_sma(df=stock_data, period=20)
     stock_data = add_ema(df=stock_data, period=14)
     stock_data = add_k(df=stock_data, period=5)
@@ -358,9 +358,9 @@ def predict_tomorrow(stock, stock_data, steps, training, db, index, params):
     stock_data = add_std(df=stock_data, period=14)
     stock_data = add_adx(df=stock_data)
     stock_data = add_r(df=stock_data, period=14)
-    
+
     stock_data_ = stock_data[['Open', 'High', 'Low', 'Close']]
-    
+
     stock_data_ = add_inverted_hammer(df=stock_data_)
     stock_data_ = add_hammer(df=stock_data_)
     stock_data_ = add_hanging_man(df=stock_data_)
@@ -381,23 +381,33 @@ def predict_tomorrow(stock, stock_data, steps, training, db, index, params):
     stock_data_ = add_star(df=stock_data_)
     stock_data_ = add_shooting_star(df=stock_data_)
     stock_data_ = add_evening_star(df=stock_data_)
-    
+
     predicted_stats = stock_data.iloc[-1]
     predicted_candlesticks = stock_data_.iloc[-1]
+
+    rsi_diff = (round(predicted_stats['RSI'], 4) - float(data_last_stats['LAST_RSI']))/float(data_last_stats['LAST_RSI'])*100
+    macd_diff = (round(predicted_stats['MACD'], 4) - float(data_last_stats['LAST_MACD']))/float(data_last_stats['LAST_MACD'])*100
+    pred_gain_loss = format_floats(gain_loss, 4)
+
+    # Get trends
     
-    rsi_trend = (round(predicted_stats['RSI'], 4) - float(data_last_stats['LAST_RSI']))/float(data_last_stats['LAST_RSI'])*100
-    macd_trend = (round(predicted_stats['MACD'], 4) - float(data_last_stats['LAST_MACD']))/float(data_last_stats['LAST_MACD'])*100
+    trend_rsi = 'pos' if rsi_diff >= 0 else 'neg'
+    trend_macd = 'pos' if macd_diff > 0 else 'neg'
+    trend_gain_loss = 'pos' if float(pred_gain_loss) > 0 else 'neg'
 
     predictions = {"Date": next_date,
                    "PRED_Price": format_floats(next_price, 2),
-                   "PRED_GAIN_LOSS": format_floats(gain_loss, 4),
+                   "PRED_Price_Diff": pred_gain_loss,
+                   "PRED_Price_Trend": trend_gain_loss,
+                   "PRED_RSI": format_floats(predicted_stats['RSI'], 4),
+                   "PRED_RSI_TREND": trend_rsi,
+                   "PRED_MACD": format_floats(predicted_stats['MACD'], 4),
+                   "PRED_MACD_TREND": trend_macd,
                    "PRED_SMA": format_floats(predicted_stats['SMA'], 4),
                    "PRED_EMA": format_floats(predicted_stats['EMA'], 4),
                    "PRED_%K": format_floats(predicted_stats['%K'], 4),
-                   "PRED_MACD": format_floats(predicted_stats['MACD'], 4),
                    "PRED_BB-Upper": format_floats(predicted_stats['BB-Upper'], 4),
                    "PRED_BB-Lower": format_floats(predicted_stats['BB-Lower'], 4),
-                   "PRED_RSI": format_floats(predicted_stats['RSI'], 4),
                    "PRED_Fibonacci_min": format_floats(predicted_stats['Fibonacci_min'], 4),
                    "PRED_Fibonacci_max": format_floats(predicted_stats['Fibonacci_max'], 4),
                    "PRED_tenkan_sen": format_floats(predicted_stats['tenkan_sen'], 4),
@@ -413,7 +423,7 @@ def predict_tomorrow(stock, stock_data, steps, training, db, index, params):
                    "PRED_Hanging Man": str(predicted_candlesticks['Hanging Man']),
                    "PRED_Bearish Harami": str(predicted_candlesticks['Bearish Harami']),
                    "PRED_Bullish Harami": str(predicted_candlesticks['Bullish Harami']),
-                   "PRED_Dark Cloud Cover": str(predicted_candlesticks['Dark Cloud Cover']),     
+                   "PRED_Dark Cloud Cover": str(predicted_candlesticks['Dark Cloud Cover']),
                    "PRED_DOJI": str(predicted_candlesticks['DOJI']),
                    "PRED_DOJI Star": str(predicted_candlesticks['DOJI Star']),
                    "PRED_Dragonfly DOJI": str(predicted_candlesticks['Dragonfly DOJI']),
@@ -425,21 +435,27 @@ def predict_tomorrow(stock, stock_data, steps, training, db, index, params):
                    "PRED_Piercing": str(predicted_candlesticks['Piercing']),
                    "PRED_Rain Drop": str(predicted_candlesticks['Rain Drop']),
                    "PRED_Rain Drop DOJI": str(predicted_candlesticks['Rain Drop DOJI']),
-                   "PRED_Star": str(predicted_candlesticks['Star']),    
+                   "PRED_Star": str(predicted_candlesticks['Star']),
                    "PRED_Shooting Star": str(predicted_candlesticks['Shooting Star']),
-                   "PRED_Evening Star": str(predicted_candlesticks['Evening Star']),
-                   "PRED_RSI_TREND": format_floats(rsi_trend, 4),
-                   "PRED_MACD_TREND": format_floats(macd_trend, 4)}
-    
+                   "PRED_Evening Star": str(predicted_candlesticks['Evening Star'])}
+
     output = {**predictions, **data_last_stats}
+   
+    # Export to current day folder
+    export_firebase(data=output, stock=stock, db=db, folder='CURRENT_PREDS', delete=True)
 
-    for index_ in index:
+    trend_last_gain_loss = 'pos' if float(output["LAST_GAIN_LOSS"]) > 0 else 'neg'
 
-        export_firebase(data=output, stock=stock, db=db,
-                        folder='{}_Predictions'.format(index_))
+    # Export to history folder
+    history = {
+        f"{next_date}_PRED_Price": output["PRED_Price"], 
+        f"{next_date}_PRED_Price_Diff": output["PRED_Price_Diff"], 
+        f"{next_date}_PRED_Price_Trend": output["PRED_Price_Trend"],
+        f"{last_date}_REAL_Price": output["LAST_Close"], 
+        f"{last_date}_REAL_Price_Diff": output["LAST_GAIN_LOSS"], 
+        f"{last_date}_REAL_Price_Trend": trend_last_gain_loss}
 
-    print('STEP [3/3]: Predictions exported to Firebase!')
-
-
+    export_firebase(data=history, stock=stock, db=db, folder='HISTORY_PREDS', delete=False)
+   
 if '__main__' == __name__:
     print('')

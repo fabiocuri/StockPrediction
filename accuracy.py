@@ -22,7 +22,7 @@ if '__main__' == __name__:
     firebase_app_ = pyrebase.initialize_app(config)
     db = firebase_app_.database()
 
-    for folder in ['DJIA', 'NASDAQ', 'SP500', 'WILSHIRE']:
+    for folder in ['SP500']:
 
         users = db.child('{}_Params'.format(folder)).get()
 

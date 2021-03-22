@@ -1,0 +1,8 @@
+pyrebase
+stockstats
+pandas-datareader
+keras
+tensorflow
+sklearn
+numpy==1.19.5
+jwt
