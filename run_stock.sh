@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-FOLDER="/home/fabiocuri/Desktop/stock"
+HPT="NO"
+if [[ $(date +%u) -lt 6 ]]; then
+#-gt 5 to check if weekend (change this when in production)
+ HPT="YES"
+fi
+FOLDER="/home/fabiocuri/Desktop/stockprediction"
 #FOLDER="/home/rajaramiimb2/backend"
 PARAMETERS="$FOLDER/parameters_default.json"
 STOCKS="$FOLDER/sp500.txt"
@@ -10,7 +15,8 @@ while IFS= read -r line
 do
   content=$line
   stock="$(cut -d'>' -f1 <<<"$content")"
-  python $FOLDER/main.py $stock $PARAMETERS
+  #python $FOLDER/main.py $stock $PARAMETERS $HPT
 done < "$STOCKS"
+python $FOLDER/generate_reports.py $PARAMETERS
 #python $FOLDER/accuracy.py $PARAMETERS
 deactivate

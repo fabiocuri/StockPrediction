@@ -8,7 +8,7 @@ from models import impute_missing_values, hyperparameter_tuning, predict_tomorro
 if '__main__' == __name__:
 
     # Configuration
-    stock, params_f = str(sys.argv[1]), str(sys.argv[2])
+    stock, params_f, hpt_bool = str(sys.argv[1]), str(sys.argv[2]), str(sys.argv[3])
     
     with open(params_f) as json_file:
      
@@ -27,30 +27,15 @@ if '__main__' == __name__:
     # db.child("CURRENT_PREDS").remove()
     # sys.exit()
 
-    # Get stock data
     stock_data = get_historical_data(stock=stock, years=local_config['years'])
-    
-    # Missing values imputation
     stock_data = impute_missing_values(stock_data=stock_data)
 
-    # Hyper-parameter tuning
-    hyperparameter_tuning(stock=stock, stock_data=stock_data, years=local_config['years'],
-                          length_backtesting=local_config['length_backtesting'], steps=local_config['steps'], training=local_config['training'], db=db)
+    if hpt_bool == "YES":
 
-    # Run predictions for the past
-    runs = ["all"]
-    runs.extend(list((np.array(range(14)) + 1) * -1))
+        hyperparameter_tuning(stock=stock, stock_data=stock_data, years=local_config['years'],
+                            length_backtesting=local_config['length_backtesting'], steps=local_config['steps'], training=local_config['training'], db=db)
 
-    for i in runs:
 
-        if i == "all":
-
-            subset_data = stock_data
-
-        else:
-
-            subset_data = stock_data[:i]
-
-        # Predict next day
-        predict_tomorrow(stock=stock, stock_data=subset_data, steps=local_config['steps'],
-                        training=local_config['training'], db=db)
+    # Predict next day
+    predict_tomorrow(stock=stock, stock_data=stock_data, steps=local_config['steps'],
+                    training=local_config['training'], db=db)

@@ -35,4 +35,3 @@ if '__main__' == __name__:
         data = {'Back-testing accuracy': round(avg/count, 2)}
         db.child('{}_Accuracy'.format(folder)).remove()
         db.child('{}_Accuracy'.format(folder)).push(data)
-        print('Back-testing accuracy exported to Firebase!')
