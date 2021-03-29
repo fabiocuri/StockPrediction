@@ -15,11 +15,13 @@ if '__main__' == __name__:
     with open(params_f) as json_file:
      
         local_config = json.load(json_file) 
+        
+    authdomain = local_config['authDomain']
 
     config = {"apiKey": local_config["apiKey"],
-              "authDomain": f"{local_config['authDomain']}.firebaseapp.com",
-              "databaseURL": f"https://{local_config['authDomain']}.firebaseio.com",
-              "storageBucket": f"{local_config['authDomain']}.appspot.com"}
+              "authDomain": f"{authdomain}.firebaseapp.com",
+              "databaseURL": f"https://{authdomain}.firebaseio.com",
+              "storageBucket": f"{authdomain}.appspot.com"}
 
     firebase_app_ = pyrebase.initialize_app(config)
     db = firebase_app_.database()
