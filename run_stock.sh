@@ -14,8 +14,8 @@ while IFS= read -r line
 do
   content=$line
   stock="$(cut -d'>' -f1 <<<"$content")"
-  python $FOLDER/main.py $stock $PARAMETERS $HPT
+  python3.7 $FOLDER/main.py $stock $PARAMETERS $HPT
 done < "$STOCKS"
-python $FOLDER/generate_reports.py $PARAMETERS
+python3.7 $FOLDER/generate_reports.py $PARAMETERS
 #python $FOLDER/accuracy.py $PARAMETERS
 deactivate
