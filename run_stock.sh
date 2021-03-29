@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 HPT="NO"
-if [[ $(date +%u) -lt 6 ]]; then
-#-gt 5 to check if weekend (change this when in production)
+if [[ $(date +%u) -gt 5 ]]; then
  HPT="YES"
 fi
 FOLDER="/home/fabiocuri/Desktop/stockprediction"
 #FOLDER="/home/rajaramiimb2/backend"
 PARAMETERS="$FOLDER/parameters_default.json"
 STOCKS="$FOLDER/sp500.txt"
-virtualenv stockenv
+#virtualenv stockenv
 source stockenv/bin/activate
 #pip install -r requirements.txt
 while IFS= read -r line

@@ -4,7 +4,7 @@ import pyrebase
 import pandas as pd
 import numpy as np
 from datetime import date
-from collections import defaultdict
+from collections import defaultdict, Counter
 from firebase_actions import retrieve_hystoric_data
 
 pd.set_option('display.max_columns', 1000)
@@ -61,4 +61,127 @@ if '__main__' == __name__:
     today = date.today()
     date = today.strftime("%d-%m-%Y")
 
-    report.to_csv(f"Stocks_Prediction_Report_{date}.csv", index=None)
+    all_days = sorted(set(report["Date"]))
+
+    # Last Day sheet
+    date_today = today.strftime("%Y-%m-%d")
+    df_today = report[report["Date"]==date_today]
+
+    # Last 7 days
+    date_7_days = all_days[-7:]
+    df_7_days = report[report["Date"].isin(date_7_days)]
+
+    all_stocks = []
+    all_probs = []
+
+    for stock in df_7_days["Stock"].unique():
+
+        subset = df_7_days[df_7_days["Stock"]==stock]
+        subset["Match_Trend"] = subset["Match_Trend"].astype(str)
+        pctg = Counter(subset["Match_Trend"])
+        value = pctg["True"]*100/(pctg["True"]+pctg["False"])
+
+        all_stocks.append(stock)
+        all_probs.append(value)
+
+    df_7_days = pd.DataFrame()
+    df_7_days["Stock"] = all_stocks
+    df_7_days[f"% Last 7 Days"] = all_probs
+
+    # Last 14 days
+    date_14_days = all_days[-14:]
+    df_14_days = report[report["Date"].isin(date_14_days)]
+
+    all_stocks = []
+    all_probs = []
+
+    for stock in df_14_days["Stock"].unique():
+
+        subset = df_14_days[df_14_days["Stock"]==stock]
+        subset["Match_Trend"] = subset["Match_Trend"].astype(str)
+        pctg = Counter(subset["Match_Trend"])
+        value = pctg["True"]*100/(pctg["True"]+pctg["False"])
+
+        all_stocks.append(stock)
+        all_probs.append(value)
+
+    df_14_days = pd.DataFrame()
+    df_14_days["Stock"] = all_stocks
+    df_14_days[f"% Last 14 Days"] = all_probs
+
+    # All time
+
+    all_stocks = []
+    all_probs = []
+
+    for stock in report["Stock"].unique():
+
+        subset = report[report["Stock"]==stock]
+        subset["Match_Trend"] = subset["Match_Trend"].astype(str)
+        pctg = Counter(subset["Match_Trend"])
+        value = pctg["True"]*100/(pctg["True"]+pctg["False"])
+
+        all_stocks.append(stock)
+        all_probs.append(value)
+
+    df_all_time = pd.DataFrame()
+    df_all_time["Stock"] = all_stocks
+    df_all_time[f"% All Past Days"] = all_probs
+
+    # 90%
+
+    df_90 = df_all_time[df_all_time[f"% All Past Days"]>=90]
+    df_90.columns=["Stock", "% All Past Days Above 90%"]
+
+    # 80%
+
+    df_80 = df_all_time[df_all_time[f"% All Past Days"]>=80]
+    df_80.columns=["Stock", "% All Past Days Above 80%"]
+
+    # 70%
+
+    df_70 = df_all_time[df_all_time[f"% All Past Days"]>=70]
+    df_70.columns=["Stock", "% All Past Days Above 70%"]
+
+    # Create a Pandas Excel writer using XlsxWriter as the engine.
+    writer = pd.ExcelWriter(f"Report_{today}.xlsx", engine='xlsxwriter')
+
+    # Write each dataframe to a different worksheet.
+    df_today.to_excel(writer, sheet_name='Last Day')
+    df_7_days.to_excel(writer, sheet_name='One Week')
+    df_14_days.to_excel(writer, sheet_name='Two Weeks')
+
+    df_all_time.to_excel(writer, sheet_name='All Time')
+    df_90.to_excel(writer, sheet_name=f"90%")
+    df_80.to_excel(writer, sheet_name=f"80%")
+    df_70.to_excel(writer, sheet_name=f"70%")
+
+    writer.save()
+
+    # Send e-mail
+
+    from email.message import EmailMessage
+    message = EmailMessage()
+
+    sender = "stockpriceproject@gmail.com"
+    recipient = "getrajaram@gmail.com"
+    message['From'] = sender
+    message['To'] = recipient
+    message['Subject'] = f"Stock Report {today}"
+
+    body = """Please find attached the report for the stocks predictions."""
+    message.set_content(body)
+
+    import mimetypes
+    mime_type, _ = mimetypes.guess_type(f"Report_{today}.xlsx")
+    mime_type, mime_subtype = mime_type.split('/')
+
+    with open(f"Report_{today}.xlsx", 'rb') as file:
+        message.add_attachment(file.read(), maintype=mime_type, subtype=mime_subtype, filename=f"Report_{today}.xlsx")
+
+    import smtplib
+    mail_server = smtplib.SMTP_SSL('smtp.gmail.com')
+    mail_server.login("stockpriceproject@gmail.com", 'StockPrice2020')
+    mail_server.set_debuglevel(1)
+    mail_server.send_message(message)
+    mail_server.quit()
