@@ -218,11 +218,11 @@ def hyperparameter_tuning(stock, stock_data, years, length_backtesting, steps, t
     tune_boolean = True
     best_score = -1
 
-    for lstm_size in [10]:
+    for lstm_size in [10, 20]:
 
-        for batch_size in [64]:
+        for batch_size in [64, 128]:
 
-            for learning_rate in [0.01]:
+            for learning_rate in [0.01, 0.1]:
 
                 # Back-testing
                 output = {}
