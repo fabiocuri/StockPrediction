@@ -65,7 +65,7 @@ if '__main__' == __name__:
 
     # Last Day sheet
     date_today = today.strftime("%Y-%m-%d")
-    df_today = report[report["Date"]==date_today]
+    df_today = report[report["Date"]==all_days[-1]]
 
     # Last 7 days
     date_7_days = all_days[-7:]
