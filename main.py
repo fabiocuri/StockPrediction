@@ -34,20 +34,16 @@ if '__main__' == __name__:
     stock_data = get_historical_data(stock=stock, years=local_config['years'])
     stock_data = impute_missing_values(stock_data=stock_data)
 
+    # If weekend, tune
     if hpt_bool == "YES":
 
         hyperparameter_tuning(stock=stock, stock_data=stock_data, years=local_config['years'],
                             length_backtesting=local_config['length_backtesting'], steps=local_config['steps'], training=local_config['training'], db=db)
-
-    for i in [-1]:
-    
-        subset_stock_data = stock_data[:i]
-
-        # Predict next day
-        predict_tomorrow(stock=stock, stock_data=subset_stock_data, steps=local_config['steps'],
-                        training=local_config['training'], db=db)
+        
+    # If weekday, predict
+    else:
                         
-    predict_tomorrow(stock=stock, stock_data=stock_data, steps=local_config['steps'],
-                    training=local_config['training'], db=db)
+        predict_tomorrow(stock=stock, stock_data=stock_data, steps=local_config['steps'],
+                        training=local_config['training'], db=db)
                         
                         
