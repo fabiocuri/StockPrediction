@@ -1,9 +1,13 @@
 import sys
 import json
+import pandas as pd
 import pyrebase
 import numpy as np
 from get_data import get_historical_data
-from models import impute_missing_values, hyperparameter_tuning, predict_tomorrow
+from models import impute_missing_values, hyperparameter_tuning_lstm, predict_tomorrow_lstm, hyperparameter_tuning_sarimax, predict_tomorrow_sarimax
+from firebase_actions import retrieve_hyperparams_firebase
+import warnings
+warnings.filterwarnings("ignore")
 
 if '__main__' == __name__:
 
@@ -26,24 +30,37 @@ if '__main__' == __name__:
     firebase_app_ = pyrebase.initialize_app(config)
     db = firebase_app_.database()
 
-    # db.child("XGBOOST_HYPERPARAMS").remove()
-    # db.child("HISTORY_PREDS").remove()
-    # db.child("CURRENT_PREDS").remove()
-    # sys.exit()
-
     stock_data = get_historical_data(stock=stock, years=local_config['years'])
     stock_data = impute_missing_values(stock_data=stock_data)
 
     # If weekend, tune
     if hpt_bool == "YES":
 
-        hyperparameter_tuning(stock=stock, stock_data=stock_data, years=local_config['years'],
-                            length_backtesting=local_config['length_backtesting'], steps=local_config['steps'], training=local_config['training'], db=db)
-        
+        # Retrieve only stocks lower than 50% accuracy
+        report = pd.read_excel("Report.xlsx", sheet_name="All Time")
+        report = report[report["% All Past Days"] < 50]
+        critical_stocks = list(report["Stock"])
+
+        # If stock is not critical, tune LSTM
+        if stock not in critical_stocks:
+
+            hyperparameter_tuning_lstm(stock=stock, stock_data=stock_data, length_backtesting=local_config['length_backtesting'], steps=local_config['steps'], training=local_config['training'], db=db)
+
+        # If stock is critical, tune SARIMAX
+        else:
+
+            hyperparameter_tuning_sarimax(stock=stock, stock_data=stock_data, length_backtesting=local_config['length_backtesting'], db=db)
+            
     # If weekday, predict
     else:
-                        
-        predict_tomorrow(stock=stock, stock_data=stock_data, steps=local_config['steps'],
-                        training=local_config['training'], db=db)
-                        
-                        
+
+        params = retrieve_hyperparams_firebase(stock=stock, db=db)
+
+        if "LSTM size" in params.keys():
+
+            predict_tomorrow_lstm(stock=stock, stock_data=stock_data, steps=local_config['steps'],
+                            training=local_config['training'], db=db, params=params)
+
+        if "Combination" in params.keys():
+
+            predict_tomorrow_sarimax(stock=stock, stock_data=stock_data, db=db, params=params)
