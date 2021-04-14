@@ -1,15 +1,17 @@
 import numpy as np
 import pandas as pd
 import datetime as dt
-from keras.optimizers import Adam
-from keras.models import Sequential
-from keras.callbacks import EarlyStopping
-from keras.layers import Dense, LSTM, Dropout
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Dense, LSTM, Dropout
 from sklearn.preprocessing import MinMaxScaler
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 from sklearn.feature_selection import mutual_info_regression
 from sklearn.impute import SimpleImputer
 from get_data import *
 from firebase_actions import *
+import itertools
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 from firebase_actions import retrieve_hyperparams_firebase
@@ -210,9 +212,9 @@ def evaluate_backtesting(output):
     return score
 
 
-def hyperparameter_tuning(stock, stock_data, years, length_backtesting, steps, training, db):
+def hyperparameter_tuning_lstm(stock, stock_data, length_backtesting, steps, training, db):
     """
-    Hyper-parameter tuning with back-testing.
+    Hyper-parameter tuning with back-testing for LSTM.
     """
 
     tune_boolean = True
@@ -274,12 +276,10 @@ def hyperparameter_tuning(stock, stock_data, years, length_backtesting, steps, t
     export_firebase(data=hyperparams, stock=stock, db=db, folder='XGBOOST_HYPERPARAMS', delete=True)
 
 
-def predict_tomorrow(stock, stock_data, steps, training, db):
+def predict_tomorrow_lstm(stock, stock_data, steps, training, db, params):
     """
-    Predict gain_loss and price for the next day.
+    Predict gain_loss and price for the next day for LSTM.
     """
-
-    params = retrieve_hyperparams_firebase(stock=stock, db=db)
 
     columns = list(stock_data.columns)
 
@@ -294,8 +294,9 @@ def predict_tomorrow(stock, stock_data, steps, training, db):
     tune_boolean = False
 
     last_price = float(stock_data['Close'][-1])
+    
 
-    lstm_size, batch_size, learning_rate, model_features = params['lstm_size'], params['batch_size'], params['learning_rate'], params['selected_features'].replace(
+    lstm_size, batch_size, learning_rate, model_features = params['LSTM size'], params['Batch size'], params['Learning rate'], params['Selected features'].replace(
         "'", '').replace("[", '').replace("]", '').split(', ')
 
     last_date, next_date = get_dates(stock_data)
@@ -455,6 +456,96 @@ def predict_tomorrow(stock, stock_data, steps, training, db):
         f"{last_date}_REAL_Price_Diff": output["LAST_GAIN_LOSS"], 
         f"{last_date}_REAL_Price_Trend": trend_last_gain_loss}
 
+    export_firebase(data=history, stock=stock, db=db, folder='HISTORY_PREDS', delete=False)
+
+
+def hyperparameter_tuning_sarimax(stock, stock_data, length_backtesting, db):
+    """
+    Hyper-parameter tuning with back-testing for SARIMAX.
+    """
+
+    p = d = q = range(0, 3)
+    pdq = list(itertools.product(p, d, q))
+    type_trends=['n','c','t','ct']
+
+    best_trend = -1
+
+    for combination in pdq:
+        for type_trend in type_trends:
+
+            count_trend = 0
+
+            for i in list((np.array(range(length_backtesting)) + 1) * -1):
+
+                stock_data_ = stock_data[:i]
+
+                history_endog = list(stock_data_[:-1]["GAIN_LOSS"])
+                val_value = float(stock_data_.iloc[-1]["GAIN_LOSS"])
+
+                model = SARIMAX(endog=history_endog, order=combination, trend=type_trend)
+                model_fit = model.fit(disp=False)
+                prediction = model_fit.forecast(steps=1)
+                prediction = prediction[0]
+
+                error = abs(val_value - prediction) * 100 / (val_value)
+
+                if error >= 0:
+
+                    count_trend+=1
+
+            if count_trend > best_trend:
+                
+                best_trend = count_trend
+                best_c = combination
+                best_trend_type = type_trend
+
+    accuracy = str(round(best_trend * 100 / length_backtesting, 2))
+    hyperparams = {"Combination": list(best_c), "Trend Type": best_trend_type, "Back-testing accuracy": accuracy}
+
+    export_firebase(data=hyperparams, stock=stock, db=db, folder='XGBOOST_HYPERPARAMS', delete=True)
+
+
+def predict_tomorrow_sarimax(stock, stock_data, db, params):
+    """
+    Hyper-parameter tuning with back-testing for SARIMAX.
+    """
+
+    history_endog = list(stock_data["GAIN_LOSS"])
+
+    model = SARIMAX(endog=history_endog, order=params["Combination"], trend=params["Trend Type"])
+    model_fit = model.fit(disp=False)
+    prediction = model_fit.forecast(steps=1)
+    prediction = float(prediction[0])
+
+    last_date, next_date = get_dates(stock_data)
+
+    columns = list(stock_data.columns)
+
+    last_stats = stock_data.iloc[-1]
+
+    data_last_stats = {}
+
+    for entry in columns:
+
+        data_last_stats['LAST_' + entry] = format_floats(last_stats[entry], 4)
+
+    next_price = (1 + prediction) * float(data_last_stats["LAST_Close"])
+    pred_gain_loss = format_floats(prediction, 4)
+    trend_gain_loss = 'pos' if float(prediction) > 0 else 'neg'
+    trend_last_gain_loss = 'pos' if float(data_last_stats["LAST_GAIN_LOSS"]) > 0 else 'neg'
+
+    history = {
+        f"{next_date}_PRED_Price": format_floats(next_price, 2), 
+        f"{next_date}_PRED_Price_Diff": pred_gain_loss, 
+        f"{next_date}_PRED_Price_Trend": trend_gain_loss,
+        f"{last_date}_REAL_Price": data_last_stats["LAST_Close"], 
+        f"{last_date}_REAL_Price_Diff": data_last_stats["LAST_GAIN_LOSS"], 
+        f"{last_date}_REAL_Price_Trend": trend_last_gain_loss}
+
+    # Export to current day folder
+    export_firebase(data=history, stock=stock, db=db, folder='CURRENT_PREDS', delete=True)
+
+    # Export to history folder
     export_firebase(data=history, stock=stock, db=db, folder='HISTORY_PREDS', delete=False)
    
 if '__main__' == __name__:
