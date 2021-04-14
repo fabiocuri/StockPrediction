@@ -7,3 +7,4 @@ sklearn
 numpy
 jwt
 xlsxwriter
+statsmodels
