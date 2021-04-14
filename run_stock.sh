@@ -12,5 +12,3 @@ do
   stock="$(cut -d'>' -f1 <<<"$content")"
   python3.7 $FOLDER/main.py $stock $PARAMETERS $HPT
 done < "$STOCKS"
-python3.7 $FOLDER/generate_reports.py $PARAMETERS
-deactivate
