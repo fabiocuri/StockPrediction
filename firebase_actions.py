@@ -17,11 +17,8 @@ def retrieve_hyperparams_firebase(stock, db):
     params = {}
 
     for i in users.val():
-        
-        params['lstm_size'] = users.val()[i]['LSTM size']
-        params['batch_size'] = users.val()[i]['Batch size']
-        params['learning_rate'] = users.val()[i]['Learning rate']
-        params['selected_features'] = users.val()[i]['Selected features']
+
+        params = users.val()[i]
 
     return params
 
