@@ -13,6 +13,7 @@ if '__main__' == __name__:
 
     # Configuration
     params_f = str(sys.argv[1])
+    export_file = str(sys.argv[2])
     
     with open(params_f) as json_file:
      
@@ -144,7 +145,7 @@ if '__main__' == __name__:
     df_70.columns=["Stock", "% All Past Days Above 70%"]
 
     # Create a Pandas Excel writer using XlsxWriter as the engine.
-    writer = pd.ExcelWriter(f"Report_{today}.xlsx", engine='xlsxwriter')
+    writer = pd.ExcelWriter("Report.xlsx", engine='xlsxwriter')
 
     # Write each dataframe to a different worksheet.
     df_today.to_excel(writer, sheet_name='Last Day')
@@ -158,30 +159,32 @@ if '__main__' == __name__:
 
     writer.save()
 
-    # Send e-mail
+    if export_file == "yes":
 
-    from email.message import EmailMessage
-    message = EmailMessage()
+        # Send e-mail
 
-    sender = "stockpriceproject@gmail.com"
-    recipient = "getrajaram@gmail.com"
-    message['From'] = sender
-    message['To'] = recipient
-    message['Subject'] = f"Stock Report {today}"
+        from email.message import EmailMessage
+        message = EmailMessage()
 
-    body = """Please find attached the report for the stocks predictions."""
-    message.set_content(body)
+        sender = "stockpriceproject@gmail.com"
+        recipient = "getrajaram@gmail.com"
+        message['From'] = sender
+        message['To'] = recipient
+        message['Subject'] = f"Stock Report {today}"
 
-    import mimetypes
-    mime_type, _ = mimetypes.guess_type(f"Report_{today}.xlsx")
-    mime_type, mime_subtype = mime_type.split('/')
+        body = """Please find attached the report for the stocks predictions."""
+        message.set_content(body)
 
-    with open(f"Report_{today}.xlsx", 'rb') as file:
-        message.add_attachment(file.read(), maintype=mime_type, subtype=mime_subtype, filename=f"Report_{today}.xlsx")
+        import mimetypes
+        mime_type, _ = mimetypes.guess_type(f"Report_{today}.xlsx")
+        mime_type, mime_subtype = mime_type.split('/')
 
-    import smtplib
-    mail_server = smtplib.SMTP_SSL('smtp.gmail.com')
-    mail_server.login("stockpriceproject@gmail.com", 'StockPrice2020')
-    mail_server.set_debuglevel(1)
-    mail_server.send_message(message)
-    mail_server.quit()
+        with open("Report.xlsx", 'rb') as file:
+            message.add_attachment(file.read(), maintype=mime_type, subtype=mime_subtype, filename=f"Report_{today}.xlsx")
+
+        import smtplib
+        mail_server = smtplib.SMTP_SSL('smtp.gmail.com')
+        mail_server.login("stockpriceproject@gmail.com", 'StockPrice2020')
+        mail_server.set_debuglevel(1)
+        mail_server.send_message(message)
+        mail_server.quit()
