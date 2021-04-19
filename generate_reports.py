@@ -143,6 +143,16 @@ if '__main__' == __name__:
 
     df_70 = df_all_time[df_all_time[f"% All Past Days"]>=70]
     df_70.columns=["Stock", "% All Past Days Above 70%"]
+              
+    # 60%
+
+    df_60 = df_all_time[df_all_time[f"% All Past Days"]>=60]
+    df_60.columns=["Stock", "% All Past Days Above 60%"]
+              
+    # 50%
+
+    df_50 = df_all_time[df_all_time[f"% All Past Days"]>=50]
+    df_50.columns=["Stock", "% All Past Days Above 50%"]
 
     # Create a Pandas Excel writer using XlsxWriter as the engine.
     writer = pd.ExcelWriter("Report.xlsx", engine='xlsxwriter')
@@ -151,11 +161,12 @@ if '__main__' == __name__:
     df_today.to_excel(writer, sheet_name='Last Day')
     df_7_days.to_excel(writer, sheet_name='One Week')
     df_14_days.to_excel(writer, sheet_name='Two Weeks')
-
     df_all_time.to_excel(writer, sheet_name='All Time')
     df_90.to_excel(writer, sheet_name=f"90%")
     df_80.to_excel(writer, sheet_name=f"80%")
     df_70.to_excel(writer, sheet_name=f"70%")
+    df_60.to_excel(writer, sheet_name=f"60%")
+    df_50.to_excel(writer, sheet_name=f"50%")
 
     writer.save()
 
