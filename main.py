@@ -32,13 +32,15 @@ if '__main__' == __name__:
 
     stock_data = get_historical_data(stock=stock, years=local_config['years'])
     stock_data = impute_missing_values(stock_data=stock_data)
+    
+    hpt_bool = "YES" ## comment
 
     # If weekend, tune
     if hpt_bool == "YES":
 
-        # Retrieve only stocks lower than 50% accuracy
+        # Retrieve only stocks lower than 100% accuracy
         report = pd.read_excel("Report.xlsx", sheet_name="All Time")
-        report = report[report["% All Past Days"] < 50]
+        report = report[report["% All Past Days"] < 100] ## change to 50 in the future
         critical_stocks = list(report["Stock"])
 
         # If stock is not critical, tune LSTM
