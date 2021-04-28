@@ -6,7 +6,7 @@ fi
 #FOLDER="/home/rajaramiimb/backend"
 FOLDER="/home/fabio/Desktop/stockprediction"
 PARAMETERS="$FOLDER/parameters_default.json"
-STOCKS="$FOLDER/sp500_machine1.txt"
+STOCKS="$FOLDER/sp500.txt"
 while IFS= read -r line
 do
   content=$line
