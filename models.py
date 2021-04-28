@@ -6,7 +6,6 @@ import warnings
 from firebase_actions import export_firebase
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
-
 np.random.seed(0)
 
 
@@ -55,8 +54,6 @@ def predict_tomorrow_sarimax(stock, stock_data, db, params):
     """
     Hyper-parameter tuning with back-testing for SARIMAX.
     """
-
-    print(stock)
 
     history_endog = stock_data["GAIN_LOSS"]
 
