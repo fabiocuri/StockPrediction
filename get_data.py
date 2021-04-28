@@ -7,6 +7,7 @@ from stockstats import StockDataFrame
 import numpy as np
 import warnings
 import candlestick
+from sklearn.impute import SimpleImputer
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
@@ -522,13 +523,31 @@ def add_evening_star(df, invert=False):
 
     return df
 
+def impute_missing_values(stock_data):
+    """
+    Missing values imputation.
+    """
+
+    imputer = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
+    imputted = imputer.fit_transform(stock_data.values)
+
+    imputted_df = pd.DataFrame(imputted)
+    assert stock_data.shape == imputted_df.shape
+    assert imputted_df.isnull().values.any() == 0
+
+    imputted_df.columns = stock_data.columns
+    imputted_df.index = stock_data.index
+    stock_data = imputted_df
+
+    return stock_data
+
 
 def get_historical_data(stock, years):
     """
     Retrieves historical data with financial features.
     """
 
-    df, start, end = get_yahoo(stock, years)
+    df, _, _ = get_yahoo(stock, years)
 
     if 'Low' not in df.columns:
         df.Low = df.Open
@@ -573,6 +592,8 @@ def get_historical_data(stock, years):
     assert 'High' in df.columns
     assert 'Low' in df.columns
     assert 'Close' in df.columns
+
+    df = impute_missing_values(df)
 
     return df
 

@@ -1,7 +1,6 @@
 {"authDomain": "stockproject-e5f62",
 "apiKey": "AIzaSyDT2X9gha7cVneESW8GrVVQ_Gc2qZ81dyg",
 "alphavantage_key": "ULT8II6ARFY7NUMG",
-"years": 2,
-"length_backtesting": 1,
+"years": 1,
 "steps": 10,
 "training": 0.9}

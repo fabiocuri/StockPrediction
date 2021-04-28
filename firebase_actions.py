@@ -13,7 +13,7 @@ def export_firebase(data, stock, db, folder, delete):
 def retrieve_hyperparams_firebase(stock, db):
     ''' Retrieves hyper-parameters from Google Firebase for a stock already tuned '''
 
-    users = db.child('XGBOOST_HYPERPARAMS').child(stock).get()
+    users = db.child('SARIMAX_HYPERPARAMS').child(stock).get()
     params = {}
 
     for i in users.val():

@@ -1,25 +1,21 @@
 import sys
 import json
-import pandas as pd
 import pyrebase
-import numpy as np
 from get_data import get_historical_data
-from models import impute_missing_values, hyperparameter_tuning_lstm, predict_tomorrow_lstm, hyperparameter_tuning_sarimax, predict_tomorrow_sarimax
+from models import hyperparameter_tuning_sarimax, predict_tomorrow_sarimax
 from firebase_actions import retrieve_hyperparams_firebase
 import warnings
+
 warnings.filterwarnings("ignore")
 
 if '__main__' == __name__:
 
-    # Configuration
     stock, params_f, hpt_bool = str(sys.argv[1]), str(sys.argv[2]), str(sys.argv[3])
-    
-    print(stock)
-    
+
     with open(params_f) as json_file:
-     
-        local_config = json.load(json_file) 
-        
+
+        local_config = json.load(json_file)
+
     authdomain = local_config['authDomain']
 
     config = {"apiKey": local_config["apiKey"],
@@ -31,36 +27,15 @@ if '__main__' == __name__:
     db = firebase_app_.database()
 
     stock_data = get_historical_data(stock=stock, years=local_config['years'])
-    stock_data = impute_missing_values(stock_data=stock_data)
 
     # If weekend, tune
     if hpt_bool == "YES":
 
-        # Retrieve only stocks lower than 50% accuracy
-        report = pd.read_excel("Report.xlsx", sheet_name="All Time")
-        report = report[report["% All Past Days"] < 50]
-        critical_stocks = list(report["Stock"])
+        stock_data = stock_data["GAIN_LOSS"]
+        hyperparameter_tuning_sarimax(stock=stock, stock_data=stock_data, db=db)
 
-        # If stock is not critical, tune LSTM
-        if stock not in critical_stocks:
-
-            hyperparameter_tuning_lstm(stock=stock, stock_data=stock_data, length_backtesting=local_config['length_backtesting'], steps=local_config['steps'], training=local_config['training'], db=db)
-
-        # If stock is critical, tune SARIMAX
-        else:
-
-            hyperparameter_tuning_sarimax(stock=stock, stock_data=stock_data, length_backtesting=local_config['length_backtesting'], db=db)
-            
     # If weekday, predict
     else:
 
         params = retrieve_hyperparams_firebase(stock=stock, db=db)
-
-        if "LSTM size" in params.keys():
-
-            predict_tomorrow_lstm(stock=stock, stock_data=stock_data, steps=local_config['steps'],
-                            training=local_config['training'], db=db, params=params)
-
-        if "Combination" in params.keys():
-
-            predict_tomorrow_sarimax(stock=stock, stock_data=stock_data, db=db, params=params)
+        predict_tomorrow_sarimax(stock=stock, stock_data=stock_data, db=db, params=params)
