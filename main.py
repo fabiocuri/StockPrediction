@@ -27,12 +27,30 @@ if '__main__' == __name__:
     db = firebase_app_.database()
 
     stock_data = get_historical_data(stock=stock, years=local_config['years'])
+<<<<<<< HEAD
+=======
+    stock_data = impute_missing_values(stock_data=stock_data)
+    
+    hpt_bool = "YES" ## comment
+>>>>>>> f991141b7972ab08d7225de76b8312772d3d13b6
 
     # If weekend, tune
     if hpt_bool == "YES":
 
+<<<<<<< HEAD
         stock_data = stock_data["GAIN_LOSS"]
         hyperparameter_tuning_sarimax(stock=stock, stock_data=stock_data, db=db)
+=======
+        # Retrieve only stocks lower than 100% accuracy
+        report = pd.read_excel("Report.xlsx", sheet_name="All Time")
+        report = report[report["% All Past Days"] < 100] ## change to 50 in the future
+        critical_stocks = list(report["Stock"])
+
+        # If stock is not critical, tune LSTM
+        if stock not in critical_stocks:
+
+            hyperparameter_tuning_lstm(stock=stock, stock_data=stock_data, length_backtesting=local_config['length_backtesting'], steps=local_config['steps'], training=local_config['training'], db=db)
+>>>>>>> f991141b7972ab08d7225de76b8312772d3d13b6
 
     # If weekday, predict
     else:
