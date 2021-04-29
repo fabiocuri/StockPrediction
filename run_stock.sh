@@ -3,10 +3,9 @@ HPT="NO"
 if [[ $(date +%u) -gt 5 ]]; then
  HPT="YES"
 fi
-#FOLDER="/home/rajaramiimb/backend"
-FOLDER="/home/fabio/Desktop/stockprediction"
+FOLDER="/home/rajaramiimb/backend"
 PARAMETERS="$FOLDER/parameters_default.json"
-STOCKS="$FOLDER/sp500.txt"
+STOCKS="$FOLDER/sp500_machine1.txt"
 while IFS= read -r line
 do
   content=$line

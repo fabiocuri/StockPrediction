@@ -37,13 +37,5 @@ if '__main__' == __name__:
     # If weekday, predict
     else:
     
-        print(stock)
-    
         params = retrieve_hyperparams_firebase(stock=stock, db=db)
-    
-        for i in range(1, 15):
-        
-            subset = stock_data[:-i]
-            predict_tomorrow_sarimax(stock=stock, stock_data=subset, db=db, params=params)
-            
         predict_tomorrow_sarimax(stock=stock, stock_data=stock_data, db=db, params=params)
