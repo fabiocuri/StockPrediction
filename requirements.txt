@@ -8,3 +8,4 @@ numpy
 jwt
 xlsxwriter
 statsmodels
+pmdarima
