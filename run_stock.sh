@@ -10,5 +10,5 @@ while IFS= read -r line
 do
   content=$line
   stock="$(cut -d'>' -f1 <<<"$content")"
-  python $FOLDER/main.py $stock $PARAMETERS $HPT
+  python3.7 $FOLDER/main.py $stock $PARAMETERS $HPT
 done < "$STOCKS"
