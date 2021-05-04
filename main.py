@@ -38,5 +38,4 @@ if '__main__' == __name__:
     else:
 
         params = retrieve_hyperparams_firebase(stock=stock, db=db)
-    
         predict_tomorrow_sarimax(stock=stock, stock_data=stock_data, db=db, params=params)
