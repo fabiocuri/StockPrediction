@@ -59,100 +59,69 @@ if '__main__' == __name__:
     report.dropna(inplace=True)
     report["Match_Trend"] = report["REAL_Price_Trend"] == report["PRED_Price_Trend"]
 
-    today = date.today()
-    date = today.strftime("%d-%m-%Y")
+    ## CREATE REPORT!
 
     all_days = sorted(set(report["Date"]))
 
     # Last Day sheet
-    date_today = today.strftime("%Y-%m-%d")
-    df_today = report[report["Date"]==all_days[-1]]
+    last_day = all_days[-1]
+    df_today = report[report["Date"]==last_day]
+
+    def sum_df(df, n):
+
+        all_stocks = []
+        all_probs = []
+
+        for stock in df["Stock"].unique():
+
+            subset = df[df["Stock"]==stock]
+            subset["Match_Trend"] = subset["Match_Trend"].astype(str)
+            pctg = Counter(subset["Match_Trend"])
+            value = pctg["True"]*100/(pctg["True"]+pctg["False"])
+
+            all_stocks.append(stock)
+            all_probs.append(value)
+
+        df_sum = pd.DataFrame()
+        df_sum["Stock"] = all_stocks
+        df_sum[f"% Last {n} Days"] = all_probs
+
+        return df_sum
 
     # Last 7 days
     date_7_days = all_days[-7:]
     df_7_days = report[report["Date"].isin(date_7_days)]
-
-    all_stocks = []
-    all_probs = []
-
-    for stock in df_7_days["Stock"].unique():
-
-        subset = df_7_days[df_7_days["Stock"]==stock]
-        subset["Match_Trend"] = subset["Match_Trend"].astype(str)
-        pctg = Counter(subset["Match_Trend"])
-        value = pctg["True"]*100/(pctg["True"]+pctg["False"])
-
-        all_stocks.append(stock)
-        all_probs.append(value)
-
-    df_7_days = pd.DataFrame()
-    df_7_days["Stock"] = all_stocks
-    df_7_days[f"% Last 7 Days"] = all_probs
+    df_7_days = sum_df(df_7_days, "7")
 
     # Last 14 days
     date_14_days = all_days[-14:]
     df_14_days = report[report["Date"].isin(date_14_days)]
+    df_14_days = sum_df(df_14_days, "14")
 
-    all_stocks = []
-    all_probs = []
+    # 90% of last 14 days
 
-    for stock in df_14_days["Stock"].unique():
+    df_90 = df_14_days[df_14_days[f"% Last 14 Days"]>=90]
+    df_90.columns=["Stock", f"% Last 14 Days Above 90%"]
 
-        subset = df_14_days[df_14_days["Stock"]==stock]
-        subset["Match_Trend"] = subset["Match_Trend"].astype(str)
-        pctg = Counter(subset["Match_Trend"])
-        value = pctg["True"]*100/(pctg["True"]+pctg["False"])
+    # 80% of last 14 days
 
-        all_stocks.append(stock)
-        all_probs.append(value)
+    df_80 = df_14_days[df_14_days[f"% Last 14 Days"]>=80]
+    df_80.columns=["Stock", f"% Last 14 Days Above 80%"]
 
-    df_14_days = pd.DataFrame()
-    df_14_days["Stock"] = all_stocks
-    df_14_days[f"% Last 14 Days"] = all_probs
+    # 70% of last 14 days
 
-    # All time
-
-    all_stocks = []
-    all_probs = []
-
-    for stock in report["Stock"].unique():
-
-        subset = report[report["Stock"]==stock]
-        subset["Match_Trend"] = subset["Match_Trend"].astype(str)
-        pctg = Counter(subset["Match_Trend"])
-        value = pctg["True"]*100/(pctg["True"]+pctg["False"])
-
-        all_stocks.append(stock)
-        all_probs.append(value)
-
-    df_all_time = pd.DataFrame()
-    df_all_time["Stock"] = all_stocks
-    df_all_time[f"% All Past Days"] = all_probs
-
-    # 90%
-
-    df_90 = df_all_time[df_all_time[f"% All Past Days"]>=90]
-    df_90.columns=["Stock", "% All Past Days Above 90%"]
-
-    # 80%
-
-    df_80 = df_all_time[df_all_time[f"% All Past Days"]>=80]
-    df_80.columns=["Stock", "% All Past Days Above 80%"]
-
-    # 70%
-
-    df_70 = df_all_time[df_all_time[f"% All Past Days"]>=70]
-    df_70.columns=["Stock", "% All Past Days Above 70%"]
+    df_70 = df_14_days[df_14_days[f"% Last 14 Days"]>=70]
+    df_70.columns=["Stock", f"% Last 14 Days Above 70%"]
               
-    # 60%
+    # 60% of last 14 days
 
-    df_60 = df_all_time[df_all_time[f"% All Past Days"]>=60]
-    df_60.columns=["Stock", "% All Past Days Above 60%"]
+    df_60 = df_14_days[df_14_days[f"% Last 14 Days"]>=60]
+    df_60.columns=["Stock", f"% Last 14 Days Above 60%"]
               
-    # 50%
+    # 50% of last 14 days
 
-    df_50 = df_all_time[df_all_time[f"% All Past Days"]>=50]
-    df_50.columns=["Stock", "% All Past Days Above 50%"]
+    df_50 = df_14_days[df_14_days[f"% Last 14 Days"]>=50]
+    df_50.columns=["Stock", f"% Last 14 Days Above 50%"]
 
     # Create a Pandas Excel writer using XlsxWriter as the engine.
     writer = pd.ExcelWriter("Report.xlsx", engine='xlsxwriter')
@@ -161,7 +130,6 @@ if '__main__' == __name__:
     df_today.to_excel(writer, sheet_name='Last Day')
     df_7_days.to_excel(writer, sheet_name='One Week')
     df_14_days.to_excel(writer, sheet_name='Two Weeks')
-    df_all_time.to_excel(writer, sheet_name='All Time')
     df_90.to_excel(writer, sheet_name=f"90%")
     df_80.to_excel(writer, sheet_name=f"80%")
     df_70.to_excel(writer, sheet_name=f"70%")
