@@ -149,17 +149,17 @@ if '__main__' == __name__:
         recipient = "getrajaram@gmail.com"
         message['From'] = sender
         message['To'] = recipient
-        message['Subject'] = f"Stock Report {today}"
+        message['Subject'] = f"Stock Report"
 
         body = """Please find attached the report for the stocks predictions."""
         message.set_content(body)
 
         import mimetypes
-        mime_type, _ = mimetypes.guess_type(f"Report_{today}.xlsx")
+        mime_type, _ = mimetypes.guess_type(f"Report.xlsx")
         mime_type, mime_subtype = mime_type.split('/')
 
         with open("Report.xlsx", 'rb') as file:
-            message.add_attachment(file.read(), maintype=mime_type, subtype=mime_subtype, filename=f"Report_{today}.xlsx")
+            message.add_attachment(file.read(), maintype=mime_type, subtype=mime_subtype, filename=f"Report.xlsx")
 
         import smtplib
         mail_server = smtplib.SMTP_SSL('smtp.gmail.com')
